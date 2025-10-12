@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Growth Ratio (GR/year)</title>
+  <title>Growth Ratio (GR/year)</title>
   <style>
-    :root{
+    :root {
       --primary:#004b87;
       --primary-600:#0060b3;
       --ok:#16a34a;
@@ -26,7 +26,6 @@
     }
     h1 { color: var(--primary); margin: 0 0 .25rem; text-align:center; }
     p  { color: #555; margin: 0 0 1rem; font-size: .95rem; text-align:center; }
-
     .card {
       background: #fff;
       padding: 1.25rem;
@@ -48,37 +47,15 @@
     .btn.secondary{ background:#e9eef6; color:#163f5f; }
     .btn:hover{ background:var(--primary-600); }
     .btn.secondary:hover{ background:#dfe7f3; }
-
     .result { margin-top: 1rem; text-align:center; font-weight:700; font-size:1.25rem; }
     .badge  { margin-top: .3rem; text-align:center; font-weight:700; }
     .note   { margin-top: .35rem; font-size: .95rem; color:#444; text-align:center; }
     .disclaimer { margin-top: .9rem; font-size: .8rem; color: var(--muted); text-align:center; }
-
-    .toast{
-      position: fixed; left:50%; transform:translateX(-50%);
-      bottom:16px; background:#111827; color:#fff; padding:.55rem .8rem;
-      border-radius:10px; font-size:.9rem; opacity:0; pointer-events:none;
-      transition:opacity .2s ease;
-    }
-    .toast.show{ opacity:1; }
-
-    /* Tarjeta de impresión */
-    @media print {
-      body{ background:#fff; }
-      .card, h1, p{ box-shadow: none; }
-      .no-print{ display:none !important; }
-      .print-card{
-        display:block !important;
-        border:1px solid #cbd5e1; border-radius:12px; padding:16px; margin-top:12px;
-      }
-    }
-    /* Oculta tarjeta de impresión en pantalla  */
-    .print-card{ display:none; }
   </style>
 </head>
 <body>
-  <h1 class="no-print">Growth Ratio (GR/year)</h1>
-  <p class="no-print">Basado en el diámetro máximo tumoral (MTD)</p>
+  <h1>Growth Ratio (GR/year)</h1>
+  <p>Basado en el diámetro máximo tumoral (MTD)</p>
 
   <div class="card">
     <label>Fecha inicial (A)</label>
@@ -93,7 +70,7 @@
     <label>Diámetro B (cm)</label>
     <input type="number" id="diamB" step="0.01" placeholder="Ej. 3.2">
 
-    <div class="btn-row no-print">
+    <div class="btn-row">
       <button class="btn" onclick="calcGR()">Calcular GR/year</button>
       <button class="btn secondary" onclick="resetForm()">Limpiar</button>
     </div>
@@ -102,149 +79,81 @@
     <div class="badge"  id="badge"></div>
     <div class="note"   id="interpret"></div>
 
-    <div class="btn-row no-print" style="margin-top:.8rem;">
-      <button class="btn secondary" onclick="copySummary()">Copiar resultado</button>
-      <button class="btn secondary" onclick="printSummary()">Imprimir</button>
-    </div>
-
     <div class="disclaimer">
-      Umbrales orientativos internacionales (ajuste a protocolo local si corresponde). Esta herramienta no reemplaza el juicio clínico.
+      Validez según umbrales internacionales. Esta herramienta no reemplaza el juicio clínico.
     </div>
   </div>
-
-  <!-- Tarjeta limpia para impresión -->
-  <div id="printCard" class="print-card">
-    <div style="font-weight:700; color:var(--primary); margin-bottom:6px;">Growth Ratio (GR/year)</div>
-    <div id="pA"></div>
-    <div id="pB"></div>
-    <div id="pMeses"></div>
-    <div id="pGR" style="margin-top:4px; font-weight:700;"></div>
-    <div id="pInterp" style="margin-top:2px;"></div>
-  </div>
-
-  <div id="toast" class="toast">Copiado</div>
 
   <script>
-    function monthsBetween(dateA, dateB) {
-      const dA = new Date(dateA);
-      const dB = new Date(dateB);
-      return (dB - dA) / (1000 * 60 * 60 * 24 * 30.4375); // mes promedio
+    function todayISO(){
+      const t = new Date();
+      t.setMinutes(t.getMinutes() - t.getTimezoneOffset());
+      return t.toISOString().slice(0,10);
+    }
+    function setDateMaxToday(){
+      const max = todayISO();
+      document.getElementById("dateA").max = max;
+      document.getElementById("dateB").max = max;
+    }
+    window.addEventListener('load', setDateMaxToday);
+
+    function monthsBetween(a,b){
+      return (b - a) / (1000 * 60 * 60 * 24 * 30.4375);
     }
 
-    function fmt(n, d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
-
-    function calcGR() {
+    function calcGR(){
       const A = parseFloat(document.getElementById("diamA").value);
       const B = parseFloat(document.getElementById("diamB").value);
       const dateA = document.getElementById("dateA").value;
       const dateB = document.getElementById("dateB").value;
-
-      const res   = document.getElementById("res");
+      const res = document.getElementById("res");
       const badge = document.getElementById("badge");
-      const interp= document.getElementById("interpret");
+      const interp = document.getElementById("interpret");
 
-      // Validaciones
-      if ((!Number.isFinite(A) && A !== 0) || (!Number.isFinite(B) && B !== 0) || !dateA || !dateB) {
-        res.textContent    = "Ingrese todos los valores";
-        badge.textContent  = "";
-        badge.style.color  = "";
-        interp.textContent = "";
-        return;
-      }
-      const meses = monthsBetween(dateA, dateB);
-      if (!isFinite(meses) || meses <= 0) {
-        res.textContent    = "Fechas inválidas";
-        badge.textContent  = "";
-        badge.style.color  = "";
-        interp.textContent = "";
+      badge.textContent=""; badge.style.color=""; interp.textContent="";
+
+      if(!A && A!==0 || !B && B!==0 || !dateA || !dateB){
+        res.textContent="Ingrese todos los valores.";
         return;
       }
 
-      // Fórmula internacional:
-      // GR/year (cm/año) = ((B - A) / meses) * 12
-      const GR = ((B - A) / meses) * 12;
+      const dA = new Date(dateA);
+      const dB = new Date(dateB);
+      const today = new Date();
+      dA.setHours(0,0,0,0); dB.setHours(0,0,0,0); today.setHours(0,0,0,0);
+
+      if(dA > today || dB > today){
+        res.textContent="Las fechas no pueden ser futuras.";
+        return;
+      }
+      if(dB <= dA){
+        res.textContent="La Fecha B debe ser posterior a la Fecha A.";
+        return;
+      }
+
+      const meses = monthsBetween(dA,dB);
+      const GR = ((B - A)/meses)*12;
+      const fmt = (n,d=2)=>Number.isFinite(n)?n.toFixed(d):"—";
       res.textContent = `GR/year = ${fmt(GR)} cm/año`;
 
-      // Semáforo + interpretación (umbrales internacionales)
-      if (GR <= 0) {
-        badge.textContent  = "✅ Estable / disminuye (verde)";
-        badge.style.color  = "#16a34a";
-        interp.textContent = "Sin crecimiento medible o reducción del tamaño. Mantener seguimiento estándar.";
-      } else if (GR <= 0.5) {
-        badge.textContent  = "⚠️ Crecimiento lento (amarillo)";
-        badge.style.color  = "#ca8a04";
-        interp.textContent = "Crecimiento bajo. Continuar vigilancia activa según calendario habitual.";
+      if(GR <= 0){
+        badge.textContent="✅ Estable / disminuye (verde)";
+        badge.style.color="#16a34a";
+        interp.textContent="Sin crecimiento medible o reducción del tamaño. Mantener seguimiento estándar.";
+      } else if(GR <= 0.5){
+        badge.textContent="⚠️ Crecimiento lento (amarillo)";
+        badge.style.color="#ca8a04";
+        interp.textContent="Crecimiento bajo. Continuar vigilancia activa según calendario habitual.";
       } else {
-        badge.textContent  = "🔴 Crecimiento significativo (rojo)";
-        badge.style.color  = "#dc2626";
-        interp.textContent = "Aumento relevante del tamaño. Considerar reevaluación y conducta según protocolo local.";
+        badge.textContent="🔴 Crecimiento significativo (rojo)";
+        badge.style.color="#dc2626";
+        interp.textContent="Aumento relevante del tamaño. Considerar reevaluación según protocolo local.";
       }
-
-      // Actualiza datos de impresión
-      updatePrintCard({A, B, dateA, dateB, meses, GR, texto: interp.textContent});
     }
 
     function resetForm(){
-      ["diamA","diamB","dateA","dateB"].forEach(id => document.getElementById(id).value = "");
-      ["res","badge","interpret"].forEach(id => document.getElementById(id).textContent = "");      
-    }
-
-    function showToast(msg="Copiado"){
-      const t = document.getElementById("toast");
-      t.textContent = msg;
-      t.classList.add("show");
-      setTimeout(()=>t.classList.remove("show"), 1300);
-    }
-
-    function summaryText(){
-      const A = parseFloat(document.getElementById("diamA").value);
-      const B = parseFloat(document.getElementById("diamB").value);
-      const dateA = document.getElementById("dateA").value;
-      const dateB = document.getElementById("dateB").value;
-      const res   = document.getElementById("res").textContent || "";
-      const interp= document.getElementById("interpret").textContent || "";
-
-      if (!A && A!==0 || !B && B!==0 || !dateA || !dateB || !res.includes("GR/year")) {
-        return "Complete los datos y calcule el GR/year antes de copiar.";
-      }
-
-      const meses = monthsBetween(dateA, dateB);
-      return [
-        `Fecha A: ${dateA} | Diámetro A: ${fmt(A)} cm`,
-        `Fecha B: ${dateB} | Diámetro B: ${fmt(B)} cm`,
-        `Intervalo: ${fmt(meses,1)} meses`,
-        `${res}`,
-        `Interpretación: ${interp}`
-      ].join("\n");
-    }
-
-    async function copySummary(){
-      const text = summaryText();
-      try{
-        await navigator.clipboard.writeText(text);
-        showToast("Resultado copiado");
-      }catch{
-        // fallback
-        const ta = document.createElement("textarea");
-        ta.value = text; document.body.appendChild(ta);
-        ta.select(); document.execCommand("copy"); ta.remove();
-        showToast("Resultado copiado");
-      }
-    }
-
-    function updatePrintCard({A,B,dateA,dateB,meses,GR,texto}){
-      document.getElementById("pA").textContent     = `Fecha A: ${dateA} | Diámetro A: ${fmt(A)} cm`;
-      document.getElementById("pB").textContent     = `Fecha B: ${dateB} | Diámetro B: ${fmt(B)} cm`;
-      document.getElementById("pMeses").textContent = `Intervalo: ${fmt(meses,1)} meses`;
-      document.getElementById("pGR").textContent    = `GR/year = ${fmt(GR)} cm/año`;
-      document.getElementById("pInterp").textContent= texto || "";
-    }
-
-    function printSummary(){
-      // Si no hay cálculo, intenta generar uno
-      const res = document.getElementById("res").textContent || "";
-      if (!res.includes("GR/year")) calcGR();
-      window.print();
+      ["diamA","diamB","dateA","dateB"].forEach(id=>document.getElementById(id).value="");
+      ["res","badge","interpret"].forEach(id=>document.getElementById(id).textContent="");
     }
   </script>
 </body>
