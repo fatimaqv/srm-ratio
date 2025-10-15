@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -97,30 +97,29 @@
   <div class="container">
     <h1>Linear Growth Rate (LGR)</h1>
     <p class="subtitle">
-      Based on maximum tumor diameter (MTD). Guided by international recommendations for the
-      active surveillance of small renal masses (SRM).
+      Basado en el diámetro tumoral máximo (MTD). Desarrollado según las recomendaciones internacionales para la vigilancia activa de masas renales pequeñas (SRM).
     </p>
 
-    <label for="fechaA">Initial date (A)</label>
+    <label for="fechaA">Fecha inicial (A)</label>
     <input type="date" id="fechaA" />
 
-    <label for="diamA">Diameter A (cm)</label>
-    <input type="number" id="diamA" step="0.1" placeholder="e.g., 1.0" />
+    <label for="diamA">Diámetro A (cm)</label>
+    <input type="number" id="diamA" step="0.1" placeholder="Ej. 1.0" />
 
-    <label for="fechaB">Follow-up date (B)</label>
+    <label for="fechaB">Fecha de control (B)</label>
     <input type="date" id="fechaB" />
 
-    <label for="diamB">Diameter B (cm)</label>
-    <input type="number" id="diamB" step="0.1" placeholder="e.g., 1.8" />
+    <label for="diamB">Diámetro B (cm)</label>
+    <input type="number" id="diamB" step="0.1" placeholder="Ej. 1.8" />
 
-    <button class="btn-primary" onclick="calcularGR()">Calculate LGR</button>
-    <button class="btn-secondary" onclick="resetForm()">Clear</button>
+    <button class="btn-primary" onclick="calcularGR()">Calcular LGR</button>
+    <button class="btn-secondary" onclick="resetForm()">Limpiar</button>
 
     <div id="resultado"></div>
     <div id="pitfalls" class="pitfalls"></div>
 
     <footer>
-      This tool follows international surveillance standards for SRM. It does not replace clinical judgment.
+      Esta herramienta sigue las guías internacionales de vigilancia activa de SRM. No reemplaza el juicio clínico.
     </footer>
   </div>
 
@@ -147,7 +146,7 @@
       if (!inputEl.value) return;
       if (inputEl.value > max) {
         inputEl.value = max;
-        console.warn('Future date detected. Adjusted to today:', max);
+        console.warn('Fecha futura detectada. Ajustada a hoy:', max);
       }
     }
 
@@ -174,13 +173,13 @@
       const B = parseFloat(document.getElementById("diamB").value);
 
       if (!faEl.value || !fbEl.value || isNaN(A) || isNaN(B)) {
-        alert("Please complete all fields.");
+        alert("Por favor, complete todos los campos.");
         return;
       }
 
       const max = hoyISO();
       if (faEl.value > max || fbEl.value > max) {
-        alert("Dates cannot be in the future.");
+        alert("Las fechas no pueden ser futuras.");
         prepararFechas();
         return;
       }
@@ -191,7 +190,7 @@
       const dias = diffMs / (1000 * 60 * 60 * 24);
 
       if (dias <= 0) {
-        alert("Follow-up date must be later than the initial date.");
+        alert("La fecha de control debe ser posterior a la inicial.");
         return;
       }
 
@@ -205,16 +204,16 @@
     function mostrarResultado(GR, dias, meses) {
       const res = document.getElementById("resultado");
       let color = "verde";
-      let texto = "Stable growth rate";
+      let texto = "Crecimiento estable";
       if (GR > TH_GR_VERDE && GR <= TH_GR_AMARILLO) {
-        color = "amarillo"; texto = "Slow growth (monitor)";
+        color = "amarillo"; texto = "Crecimiento leve (controlar)";
       } else if (GR > TH_GR_AMARILLO && GR <= TH_GR_NARANJA) {
-        color = "rojo"; texto = "Significant growth";
+        color = "rojo"; texto = "Crecimiento significativo";
       } else if (GR > TH_GR_NARANJA) {
-        color = "rojo"; texto = "Biologically implausible growth rate";
+        color = "rojo"; texto = "Crecimiento biológicamente inverosímil";
       }
       res.innerHTML = `
-        <p class="${color}">LGR = ${GR.toFixed(2)} cm/year</p>
+        <p class="${color}">LGR = ${GR.toFixed(2)} cm/año</p>
         <p>${texto}</p>
       `;
     }
@@ -222,28 +221,28 @@
     function updatePitfalls(GR, dias, meses) {
       const box = document.getElementById("pitfalls");
       if (!box) return;
-      let severity = null;
-      if (GR > UMBRAL_ALTO_CM_ANO) severity = "danger";
-      else if (dias < UMBRAL_CORTO_DIAS && GR > UMBRAL_CORTO_GR) severity = "warn";
-      if (!severity) { 
+      let severidad = null;
+      if (GR > UMBRAL_ALTO_CM_ANO) severidad = "danger";
+      else if (dias < UMBRAL_CORTO_DIAS && GR > UMBRAL_CORTO_GR) severidad = "warn";
+      if (!severidad) { 
         box.style.display = "none"; 
         box.className = "pitfalls"; 
         box.innerHTML = ""; 
         return; 
       }
-      box.className = "pitfalls" + (severity === "danger" ? " pitfalls--danger" : "");
+      box.className = "pitfalls" + (severidad === "danger" ? " pitfalls--danger" : "");
       box.innerHTML = `
-        <h3>Clinical interpretation</h3>
+        <h3>Interpretación clínica</h3>
         <ul>
-          <li>The estimated rate is <strong>${severity === "danger" ? "biologically implausible" : "atypical"}</strong> for SRM under active surveillance.</li>
-          <li>A sharp increase within <strong>${dias} days</strong> (≈ ${meses.toFixed(2)} months) usually <strong>does not represent true tumor growth</strong>, but may be due to:
+          <li>El valor estimado es <strong>${severidad === "danger" ? "biológicamente inverosímil" : "atípico"}</strong> para SRM en vigilancia activa. El promedio esperado es de <strong>0.3–0.5 cm/año</strong>.</li>
+          <li>Un aumento marcado en <strong>${dias} días</strong> (≈ ${meses.toFixed(2)} meses) a menudo <strong>no refleja crecimiento tumoral real</strong>, sino:
             <ul>
-              <li><strong>Measurement variability</strong> (different slice plane or imaging phase).</li>
-              <li><strong>Intratumoral hemorrhage or transient inflammation.</strong></li>
-              <li><strong>Segmentation or registration error</strong> between studies.</li>
+              <li><strong>Variabilidad en la medición</strong> (plano o fase diferente en TC/RM).</li>
+              <li><strong>Hemorragia intratumoral o inflamación transitoria.</strong></li>
+              <li><strong>Error de segmentación o de registro</strong> entre estudios.</li>
             </ul>
           </li>
-          <li>Review imaging methodology and confirm with a short-term follow-up if doubt persists.</li>
+          <li>Se recomienda revisar las imágenes y confirmar con un nuevo control si persiste la duda.</li>
         </ul>`;
       box.style.display = "block";
     }
