@@ -1,142 +1,225 @@
-<script>
-  // === UMBRALES (sin cambios conceptuales) ===
-  const TH_GR_VERDE    = 0.3;
-  const TH_GR_AMARILLO = 0.5;
-  const TH_GR_NARANJA  = 1.0;
-  const UMBRAL_ALTO_CM_ANO = TH_GR_NARANJA;
-  const UMBRAL_CORTO_DIAS  = 45;
-  const UMBRAL_CORTO_GR    = TH_GR_AMARILLO;
-
-  // === NUEVO: helpers para fecha actual y tope máximo ===
-  function hoyISO() {
-    const d = new Date();
-    d.setHours(0,0,0,0);
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const da = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${da}`;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Growth Rate (LGR)</title>
+<style>
+  :root {
+    --primary: #283593;
+    --ok: #2e7d32;
+    --warn: #f9a825;
+    --bad: #c62828;
+    --muted: #6b7280;
+    --light-bg: #f7f8fa;
   }
 
-  function clampFechaFutura(inputEl) {
-    const max = hoyISO();
-    if (!inputEl.value) return;
-    if (inputEl.value > max) {
-      inputEl.value = max;
-      console.warn('Fecha futura detectada. Ajustada a hoy:', max);
-    }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--light-bg);
+    color: #222;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
   }
 
-  function prepararFechas() {
-    const fa = document.getElementById('fechaA');
-    const fb = document.getElementById('fechaB');
-    const max = hoyISO();
-    fa.setAttribute('max', max);
-    fb.setAttribute('max', max);
-    fa.addEventListener('input', () => clampFechaFutura(fa));
-    fb.addEventListener('input', () => clampFechaFutura(fb));
-    fa.addEventListener('change', () => clampFechaFutura(fa));
-    fb.addEventListener('change', () => clampFechaFutura(fb));
-    clampFechaFutura(fa);
-    clampFechaFutura(fb);
+  h1 {
+    color: var(--primary);
+    font-size: 1.9rem;
+    margin-bottom: 0.2em;
   }
 
-  document.addEventListener('DOMContentLoaded', prepararFechas);
-
-  // === CÁLCULO PRINCIPAL (con chequeo de fechas futuras) ===
-  function calcularGR() {
-    const faEl = document.getElementById("fechaA");
-    const fbEl = document.getElementById("fechaB");
-    const A = parseFloat(document.getElementById("diamA").value);
-    const B = parseFloat(document.getElementById("diamB").value);
-
-    if (!faEl.value || !fbEl.value || isNaN(A) || isNaN(B)) {
-      alert("Por favor, complete todos los campos.");
-      return;
-    }
-
-    const max = hoyISO();
-    if (faEl.value > max || fbEl.value > max) {
-      alert("Las fechas no pueden ser futuras.");
-      prepararFechas();
-      return;
-    }
-
-    const fechaA = new Date(faEl.value);
-    const fechaB = new Date(fbEl.value);
-    const diffMs = fechaB - fechaA;
-    const dias = diffMs / (1000 * 60 * 60 * 24);
-
-    if (dias <= 0) {
-      alert("La fecha de control debe ser posterior a la inicial.");
-      return;
-    }
-
-    const meses = dias / 30.437;
-    const GR = ((B - A) / meses) * 12; // cm/año
-
-    mostrarResultado(GR, dias, meses);
-    updatePitfalls(GR, dias, meses);
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+    text-align: center;
   }
 
-  // === MOSTRAR RESULTADO ===
-  function mostrarResultado(GR, dias, meses) {
-    const res = document.getElementById("resultado");
-    let color = "verde";
-    let texto = "Crecimiento estable";
-    if (GR > TH_GR_VERDE && GR <= TH_GR_AMARILLO) {
-      color = "amarillo"; texto = "Crecimiento leve (controlar)";
-    } else if (GR > TH_GR_AMARILLO && GR <= TH_GR_NARANJA) {
-      color = "rojo"; texto = "Crecimiento significativo";
-    } else if (GR > TH_GR_NARANJA) {
-      color = "rojo"; texto = "Crecimiento biológicamente inverosímil";
-    }
-    res.innerHTML = `
-      <p class="${color}">Tasa de crecimiento lineal (LGR) = ${GR.toFixed(2)} cm/año</p>
-      <p>${texto}</p>
-    `;
+  .card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    width: 380px;
   }
 
-  // === SECCIÓN DE PITFALLS CLÍNICOS ===
-  function updatePitfalls(GR, dias, meses) {
-    const box = document.getElementById("pitfalls");
-    if (!box) return;
-    let severidad = null;
-    if (GR > UMBRAL_ALTO_CM_ANO) severidad = "danger";
-    else if (dias < UMBRAL_CORTO_DIAS && GR > UMBRAL_CORTO_GR) severidad = "warn";
-    if (!severidad) { 
-      box.style.display = "none"; 
-      box.className = "pitfalls"; 
-      box.innerHTML = ""; 
-      return; 
-    }
-    box.className = "pitfalls" + (severidad === "danger" ? " pitfalls--danger" : "");
-    box.innerHTML = `
-      <h3>Interpretación clínica</h3>
+  label {
+    font-weight: 600;
+    display: block;
+    margin-top: 12px;
+  }
+
+  input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+
+  button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #calc {
+    background-color: var(--primary);
+    color: white;
+  }
+
+  #clear {
+    background-color: #999;
+    color: white;
+  }
+
+  .result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-align: center;
+    font-size: 1.1rem;
+  }
+
+  .green { background: #e8f5e9; color: var(--ok); }
+  .yellow { background: #fffde7; color: var(--warn); }
+  .red { background: #ffebee; color: var(--bad); }
+
+  .note {
+    font-size: 0.9rem;
+    margin-top: 15px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .pitfalls {
+    margin-top: 18px;
+    font-size: 0.85rem;
+    padding: 10px;
+    background: #fff5f5;
+    border-left: 4px solid #c62828;
+    border-radius: 8px;
+  }
+
+  .pitfalls ul {
+    margin: 6px 0 0 18px;
+    padding: 0;
+  }
+
+  .pitfalls li {
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+  <h1>Linear Growth Rate (LGR)</h1>
+  <p class="subtitle">
+    Based on maximum tumor diameter (MTD).<br>
+    Guided by international recommendations for active surveillance of small renal masses (SRM).<br>
+    <em>Typical growth rates: 0.3–0.5 cm/year under active surveillance.</em>
+  </p>
+
+  <div class="card">
+    <label for="dateA">Initial date (A)</label>
+    <input type="date" id="dateA">
+
+    <label for="diamA">Diameter A (cm)</label>
+    <input type="number" id="diamA" step="0.01" placeholder="e.g., 1.0">
+
+    <label for="dateB">Follow-up date (B)</label>
+    <input type="date" id="dateB">
+
+    <label for="diamB">Diameter B (cm)</label>
+    <input type="number" id="diamB" step="0.01" placeholder="e.g., 1.8">
+
+    <button id="calc">Calculate LGR</button>
+    <button id="clear">Clear</button>
+
+    <div id="result" class="result"></div>
+    <div id="pitfalls" class="pitfalls" style="display:none;">
+      ⚠️ <strong>Potential pitfalls for unrealistic growth:</strong>
       <ul>
-        <li>El valor estimado es <strong>${severidad === "danger" ? "biológicamente inverosímil" : "atípico"}</strong> para una masa renal pequeña en vigilancia activa. El promedio esperado es de <strong>0.3–0.5 cm/año</strong>.</li>
-        <li>Un aumento marcado en <strong>${dias} días</strong> (≈ ${meses.toFixed(2)} meses) a menudo <strong>no refleja un crecimiento tumoral real</strong>, sino:
-          <ul>
-            <li><strong>Variabilidad en la medición</strong> (diferente plano o fase de adquisición en TC/RM).</li>
-            <li><strong>Hemorragia intratumoral o inflamación transitoria.</strong></li>
-            <li><strong>Error de segmentación o de registro</strong> entre estudios.</li>
-          </ul>
-        </li>
-        <li>Se recomienda revisar las imágenes y confirmar con un nuevo control si persiste la duda.</li>
-      </ul>`;
-    box.style.display = "block";
+        <li>Measurement variability (different slice plane or phase).</li>
+        <li>Intratumoral hemorrhage or transient inflammation.</li>
+        <li>Segmentation or registration error between studies.</li>
+      </ul>
+    </div>
+    <p class="note">
+      Interpretation thresholds: ≤0.5 cm/year = stable, 0.5–1.0 cm/year = slow, >1.0 cm/year = accelerated.<br>
+      Biological plausibility should always be confirmed by clinical judgment.
+    </p>
+  </div>
+
+<script>
+document.getElementById("calc").addEventListener("click", function() {
+  const dateA = new Date(document.getElementById("dateA").value);
+  const dateB = new Date(document.getElementById("dateB").value);
+  const A = parseFloat(document.getElementById("diamA").value);
+  const B = parseFloat(document.getElementById("diamB").value);
+  const today = new Date();
+
+  const resDiv = document.getElementById("result");
+  const pitfallsDiv = document.getElementById("pitfalls");
+
+  // Validaciones
+  if (isNaN(A) || isNaN(B) || !dateA || !dateB) {
+    resDiv.className = "result red";
+    resDiv.innerHTML = "⚠️ Please fill in all fields.";
+    return;
   }
 
-  // === LIMPIAR FORMULARIO ===
-  function resetForm() {
-    document.getElementById("fechaA").value = "";
-    document.getElementById("fechaB").value = "";
-    document.getElementById("diamA").value = "";
-    document.getElementById("diamB").value = "";
-    document.getElementById("resultado").innerHTML = "";
-    const box = document.getElementById("pitfalls");
-    box.style.display = "none"; 
-    box.className = "pitfalls"; 
-    box.innerHTML = "";
-    prepararFechas();
+  if (dateB <= dateA) {
+    resDiv.className = "result red";
+    resDiv.innerHTML = "⚠️ The follow-up date must be after the initial date.";
+    return;
   }
+
+  if (dateB > today) {
+    resDiv.className = "result red";
+    resDiv.innerHTML = "⚠️ Future dates are not allowed.";
+    return;
+  }
+
+  const months = (dateB - dateA) / (1000 * 60 * 60 * 24 * 30.44);
+  const LGR = ((B - A) / months) * 12;
+
+  if (isNaN(LGR) || !isFinite(LGR)) {
+    resDiv.className = "result red";
+    resDiv.innerHTML = "⚠️ Invalid data.";
+    return;
+  }
+
+  let colorClass, interpretation;
+  pitfallsDiv.style.display = "none";
+
+  if (LGR <= 0.5) {
+    colorClass = "green";
+    interpretation = "Stable growth rate.";
+  } else if (LGR <= 1.0) {
+    colorClass = "yellow";
+    interpretation = "Slow growth (monitor).";
+  } else {
+    colorClass = "red";
+    interpretation = "Accelerated growth (reevaluate).";
+    pitfallsDiv.style.display = "block";
+  }
+
+  resDiv.className = `result ${colorClass}`;
+  resDiv.innerHTML = `LGR = ${LGR.toFixed(2)} cm/year<br>${interpretation}`;
+});
+
+document.getElementById("clear").addEventListener("click", function() {
+  ["dateA", "dateB", "diamA", "diamB"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("result").innerHTML = "";
+  document.getElementById("pitfalls").style.display = "none";
+});
 </script>
+</body>
+</html>
