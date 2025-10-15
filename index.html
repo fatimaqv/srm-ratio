@@ -1,5 +1,5 @@
 <script>
-  // Umbrales (sin cambios)
+  // === UMBRALES (sin cambios conceptuales) ===
   const TH_GR_VERDE    = 0.3;
   const TH_GR_AMARILLO = 0.5;
   const TH_GR_NARANJA  = 1.0;
@@ -7,27 +7,22 @@
   const UMBRAL_CORTO_DIAS  = 45;
   const UMBRAL_CORTO_GR    = TH_GR_AMARILLO;
 
-  // === NUEVO: helpers de fecha hoy y tope de inputs ===
+  // === NUEVO: helpers para fecha actual y tope máximo ===
   function hoyISO() {
     const d = new Date();
-    // Ajuste a zona local y a medianoche local
     d.setHours(0,0,0,0);
     const y = d.getFullYear();
     const m = String(d.getMonth()+1).padStart(2,'0');
     const da = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${da}`; // formato value/HTML5
+    return `${y}-${m}-${da}`;
   }
 
   function clampFechaFutura(inputEl) {
     const max = hoyISO();
     if (!inputEl.value) return;
-    // Si es mayor que hoy, recortamos y avisamos suave
     if (inputEl.value > max) {
       inputEl.value = max;
-      // aviso no intrusivo
       console.warn('Fecha futura detectada. Ajustada a hoy:', max);
-      // si querés popup, descomentá:
-      // alert('La fecha no puede ser futura. Se ajustó a hoy.');
     }
   }
 
@@ -35,22 +30,19 @@
     const fa = document.getElementById('fechaA');
     const fb = document.getElementById('fechaB');
     const max = hoyISO();
-    // Setear tope máximo dinámico (hoy)
     fa.setAttribute('max', max);
     fb.setAttribute('max', max);
-    // Clamp inmediato al escribir/cambiar
     fa.addEventListener('input', () => clampFechaFutura(fa));
     fb.addEventListener('input', () => clampFechaFutura(fb));
     fa.addEventListener('change', () => clampFechaFutura(fa));
     fb.addEventListener('change', () => clampFechaFutura(fb));
-    // Por si ya tenían algo cargado
     clampFechaFutura(fa);
     clampFechaFutura(fb);
   }
 
   document.addEventListener('DOMContentLoaded', prepararFechas);
 
-  // === Cálculo (con chequeo extra de futuro) ===
+  // === CÁLCULO PRINCIPAL (con chequeo de fechas futuras) ===
   function calcularGR() {
     const faEl = document.getElementById("fechaA");
     const fbEl = document.getElementById("fechaB");
@@ -62,19 +54,18 @@
       return;
     }
 
-    // Bloqueo duro por si algo se coló
     const max = hoyISO();
     if (faEl.value > max || fbEl.value > max) {
       alert("Las fechas no pueden ser futuras.");
-      prepararFechas(); // vuelve a fijar/clamp
+      prepararFechas();
       return;
     }
 
     const fechaA = new Date(faEl.value);
     const fechaB = new Date(fbEl.value);
-
     const diffMs = fechaB - fechaA;
     const dias = diffMs / (1000 * 60 * 60 * 24);
+
     if (dias <= 0) {
       alert("La fecha de control debe ser posterior a la inicial.");
       return;
@@ -87,48 +78,55 @@
     updatePitfalls(GR, dias, meses);
   }
 
-  // === Resto de funciones, sin cambios ===
+  // === MOSTRAR RESULTADO ===
   function mostrarResultado(GR, dias, meses) {
     const res = document.getElementById("resultado");
     let color = "verde";
     let texto = "Crecimiento estable";
     if (GR > TH_GR_VERDE && GR <= TH_GR_AMARILLO) {
-      color = "amarillo"; texto = "Crecimiento leve";
+      color = "amarillo"; texto = "Crecimiento leve (controlar)";
     } else if (GR > TH_GR_AMARILLO && GR <= TH_GR_NARANJA) {
       color = "rojo"; texto = "Crecimiento significativo";
     } else if (GR > TH_GR_NARANJA) {
       color = "rojo"; texto = "Crecimiento biológicamente inverosímil";
     }
     res.innerHTML = `
-      <p class="${color}">GR/year = ${GR.toFixed(2)} cm/año</p>
+      <p class="${color}">Tasa de crecimiento lineal (LGR) = ${GR.toFixed(2)} cm/año</p>
       <p>${texto}</p>
     `;
   }
 
+  // === SECCIÓN DE PITFALLS CLÍNICOS ===
   function updatePitfalls(GR, dias, meses) {
     const box = document.getElementById("pitfalls");
     if (!box) return;
-    let severity = null;
-    if (GR > UMBRAL_ALTO_CM_ANO) severity = "danger";
-    else if (dias < UMBRAL_CORTO_DIAS && GR > UMBRAL_CORTO_GR) severity = "warn";
-    if (!severity) { box.style.display = "none"; box.className = "pitfalls"; box.innerHTML = ""; return; }
-    box.className = "pitfalls" + (severity === "danger" ? " pitfalls--danger" : "");
+    let severidad = null;
+    if (GR > UMBRAL_ALTO_CM_ANO) severidad = "danger";
+    else if (dias < UMBRAL_CORTO_DIAS && GR > UMBRAL_CORTO_GR) severidad = "warn";
+    if (!severidad) { 
+      box.style.display = "none"; 
+      box.className = "pitfalls"; 
+      box.innerHTML = ""; 
+      return; 
+    }
+    box.className = "pitfalls" + (severidad === "danger" ? " pitfalls--danger" : "");
     box.innerHTML = `
       <h3>Interpretación clínica</h3>
       <ul>
-        <li>El valor estimado es <strong>${severity === "danger" ? "biológicamente inverosímil" : "atípico"}</strong> para SRM en vigilancia activa. En promedio, ~ <strong>0.3–0.5 cm/año</strong>.</li>
-        <li>Un aumento marcado en <strong>${dias} días</strong> (≈ ${meses.toFixed(2)} meses) a menudo <strong>no refleja crecimiento tumoral real</strong>, sino:
+        <li>El valor estimado es <strong>${severidad === "danger" ? "biológicamente inverosímil" : "atípico"}</strong> para una masa renal pequeña en vigilancia activa. El promedio esperado es de <strong>0.3–0.5 cm/año</strong>.</li>
+        <li>Un aumento marcado en <strong>${dias} días</strong> (≈ ${meses.toFixed(2)} meses) a menudo <strong>no refleja un crecimiento tumoral real</strong>, sino:
           <ul>
-            <li><strong>Variabilidad en la medición</strong> (plano/ fase distinta en TC/RM).</li>
+            <li><strong>Variabilidad en la medición</strong> (diferente plano o fase de adquisición en TC/RM).</li>
             <li><strong>Hemorragia intratumoral o inflamación transitoria.</strong></li>
             <li><strong>Error de segmentación o de registro</strong> entre estudios.</li>
           </ul>
         </li>
-        <li>Revisar imágenes/metodología y confirmar con nuevo control si persiste la duda.</li>
+        <li>Se recomienda revisar las imágenes y confirmar con un nuevo control si persiste la duda.</li>
       </ul>`;
     box.style.display = "block";
   }
 
+  // === LIMPIAR FORMULARIO ===
   function resetForm() {
     document.getElementById("fechaA").value = "";
     document.getElementById("fechaB").value = "";
@@ -136,7 +134,9 @@
     document.getElementById("diamB").value = "";
     document.getElementById("resultado").innerHTML = "";
     const box = document.getElementById("pitfalls");
-    box.style.display = "none"; box.className = "pitfalls"; box.innerHTML = "";
-    prepararFechas(); // vuelve a poner el max
+    box.style.display = "none"; 
+    box.className = "pitfalls"; 
+    box.innerHTML = "";
+    prepararFechas();
   }
 </script>
